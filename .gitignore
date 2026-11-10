@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyTorch Model Weights (Ultralytics auto-downloads these)
+*.pt
+*.pth
+*.bin
+*.onnx
+
+# Output directories & archives
+output_coco/
+output/
+visualizations/
+*.zip
+*.tar.gz
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
