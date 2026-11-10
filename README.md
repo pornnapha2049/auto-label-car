@@ -6,9 +6,11 @@
 
 ## 🌟 จุดเด่นของระบบ (Key Features)
 
-1. **YOLO + SAM Refinement Pipeline**:
-   - ใช้ YOLO ตรวจจับและแยกประเภทยานพาหนะ (`car`, `truck`, `bus`, `motorcycle`)
-   - นำ Bounding Box ส่งเป็น Prompt ให้ SAM ตัด Mask รอบตัวรถได้อย่างแม่นยำ เส้นขอบคมเป๊ะ
+1. **YOLO + SAM Refinement Pipeline (2 Major Classes)**:
+   - แบ่งเป็น 2 กลุ่มคลาสหลัก:
+     - **`car` (ID: 1):** รวมยานพาหนะ 4 ล้อขึ้นไปทุกประเภท (รถยนต์, รถกระบะ, รถตู้, รถ SUV, รถบัส, รถบรรทุก)
+     - **`motorbike` (ID: 2):** รถมอเตอร์ไซค์ / รถจักรยานยนต์
+   - YOLO ตรวจจับวัตถุ ➔ ส่ง Bounding Box Prompt ให้ SAM ตัด Mask รอบตัวรถได้อย่างแม่นยำ เส้นขอบคมเป๊ะ
    - บีบอัดลดจุดพิกัดส่วนเกินด้วย Douglas-Peucker algorithm เพื่อให้ไฟล์ COCO เบาและเรนเดอร์ลื่นไหล
 2. **COCO 1.0 Annotation Format**:
    - สร้างไฟล์ `instances_default.json` และแพ็กเกจเป็น `.zip` ตามมาตรฐาน COCO 1.0 ที่ CVAT รองรับ 100%

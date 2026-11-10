@@ -8,51 +8,27 @@ from pathlib import Path
 from typing import List, Dict, Tuple, Optional, Union
 from ultralytics import YOLO, SAM
 
-# Standard 8 vehicle categories matching Set1 / CVAT schema
+# 2 Major Categories: car & motorbike (all other vehicles grouped into car)
 DEFAULT_CATEGORIES = [
     {"id": 1, "name": "car", "supercategory": ""},
-    {"id": 2, "name": "commercial_pickup", "supercategory": ""},
-    {"id": 3, "name": "home_pickup", "supercategory": ""},
-    {"id": 4, "name": "SUV", "supercategory": ""},
-    {"id": 5, "name": "truck", "supercategory": ""},
-    {"id": 6, "name": "van", "supercategory": ""},
-    {"id": 7, "name": "bus", "supercategory": ""},
-    {"id": 8, "name": "motorbike", "supercategory": ""}
+    {"id": 2, "name": "motorbike", "supercategory": ""}
 ]
-
-# Mapping standard COCO YOLO class names to Set1 category IDs
-STANDARD_YOLO_TO_CATEGORY_ID = {
-    "car": 1,
-    "commercial_pickup": 2,
-    "home_pickup": 3,
-    "suv": 4,
-    "truck": 5,
-    "van": 6,
-    "bus": 7,
-    "motorcycle": 8,
-    "motorbike": 8
-}
 
 # Distinct colors for visualization (BGR)
 CLASS_COLORS = {
-    "car": (0, 215, 255),               # Yellow-Orange
-    "commercial_pickup": (255, 191, 0), # Deep Amber
-    "home_pickup": (0, 165, 255),       # Orange
-    "suv": (147, 20, 255),              # Deep Pink
-    "truck": (255, 69, 0),              # Red-Orange
-    "van": (255, 0, 255),               # Magenta
-    "bus": (50, 205, 50),               # Lime Green
-    "motorbike": (255, 144, 30),        # Sky Blue
+    "car": (0, 215, 255),        # Yellow-Orange
+    "motorbike": (255, 144, 30), # Sky Blue
     "motorcycle": (255, 144, 30),
     "vehicle": (0, 255, 127)
 }
 
 class CarSegmenter:
     """
-    Automated Car / Vehicle Segmentation Pipeline:
-    1. YOLO: Fast vehicle detection & rough bounding box localization
-    2. SAM: Precision zero-shot boundary / polygon mask refinement
-    3. COCO Format: 100% compliant with CVAT Set1 schema (instances_default.json)
+    Automated Car / Motorbike Segmentation Pipeline:
+    1. YOLO: Fast vehicle detection (detects car, truck, bus, motorcycle)
+    2. Grouping: Groups truck, bus, van, pickup -> 'car' (id: 1); motorcycle -> 'motorbike' (id: 2)
+    3. SAM: Precision zero-shot boundary / polygon mask refinement
+    4. COCO Format: 100% compliant COCO 1.0 schema for CVAT
     """
 
     def __init__(
@@ -73,15 +49,15 @@ class CarSegmenter:
         self.approx_tolerance = approx_tolerance
         self.min_area = min_area
 
-        # Active COCO categories (defaults to Set1 8 classes)
+        # Active COCO categories: exactly 2 classes (car: 1, motorbike: 2)
         self.coco_categories = categories or list(DEFAULT_CATEGORIES)
         self.category_name_to_id = {c["name"].lower(): c["id"] for c in self.coco_categories}
-        # Add alias motorcycle -> motorbike
         if "motorbike" in self.category_name_to_id:
             self.category_name_to_id["motorcycle"] = self.category_name_to_id["motorbike"]
 
+        # Default allowed vehicle types to detect
         if target_classes is None:
-            self.target_classes = [c["name"].lower() for c in self.coco_categories] + ["motorcycle"]
+            self.target_classes = ["car", "motorbike"]
         else:
             self.target_classes = [c.lower() for c in target_classes]
 
@@ -93,11 +69,15 @@ class CarSegmenter:
         self._build_yolo_class_filters()
 
     def _build_yolo_class_filters(self):
-        """Map YOLO internal model class IDs to target classes"""
+        """Map YOLO internal vehicle class IDs (car, motorcycle, bus, truck)"""
         self.target_class_indices = []
         for idx, name in self.yolo.names.items():
             name_lower = name.lower()
-            if name_lower in self.target_classes or (name_lower == "motorcycle" and "motorbike" in self.target_classes):
+            # Include motorcycle if motorbike is requested
+            if "motorbike" in self.target_classes and name_lower in ["motorcycle", "motorbike"]:
+                self.target_class_indices.append(idx)
+            # Include car, truck, bus, van etc. if car is requested
+            elif "car" in self.target_classes and name_lower in ["car", "bus", "truck", "van", "suv", "pickup"]:
                 self.target_class_indices.append(idx)
 
     def set_models(self, yolo_model_name: str, sam_model_name: str):
@@ -112,22 +92,20 @@ class CarSegmenter:
             self.sam = SAM(sam_model_name)
 
     def set_target_classes(self, target_classes: List[str]):
-        """Update targeted vehicle classes"""
+        """Update targeted classes (car and/or motorbike)"""
         self.target_classes = [c.lower() for c in target_classes]
-        if "motorbike" in self.target_classes and "motorcycle" not in self.target_classes:
-            self.target_classes.append("motorcycle")
         self._build_yolo_class_filters()
 
-    def load_schema_from_json(self, json_path: str):
-        """Load categories directly from a sample instances_default.json"""
-        with open(json_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        if "categories" in data:
-            self.coco_categories = data["categories"]
-            self.category_name_to_id = {c["name"].lower(): c["id"] for c in self.coco_categories}
-            if "motorbike" in self.category_name_to_id:
-                self.category_name_to_id["motorcycle"] = self.category_name_to_id["motorbike"]
-            self._build_yolo_class_filters()
+    def map_to_target_class(self, raw_class_name: str) -> Tuple[str, int]:
+        """
+        Maps any vehicle class to either 'motorbike' (2) or 'car' (1)
+        """
+        name_lower = raw_class_name.lower()
+        if name_lower in ["motorcycle", "motorbike"]:
+            return "motorbike", 2
+        else:
+            # All other vehicles (truck, bus, van, pickup, etc.) are merged into 'car'
+            return "car", 1
 
     def simplify_polygon(self, polygon: np.ndarray) -> np.ndarray:
         """Simplify polygon contour using Douglas-Peucker algorithm"""
@@ -147,7 +125,7 @@ class CarSegmenter:
     ) -> Dict:
         """
         Run detection with YOLO and refine boundaries with SAM.
-        Returns annotations strictly formatted like Set1 instances_default.json.
+        Classifies strictly into 'car' (1) or 'motorbike' (2).
         """
         if isinstance(image_input, (str, Path)):
             file_name = os.path.basename(str(image_input))
@@ -171,24 +149,25 @@ class CarSegmenter:
 
         boxes = []
         classes = []
+        cat_ids = []
         scores = []
 
         if len(yolo_results.boxes) > 0:
             for b in yolo_results.boxes:
                 xyxy = b.xyxy[0].cpu().numpy().tolist()
                 cls_idx = int(b.cls[0].cpu().numpy())
-                cls_name = self.yolo.names[cls_idx].lower()
+                raw_name = self.yolo.names[cls_idx].lower()
                 conf = float(b.conf[0].cpu().numpy())
 
-                # Standardize motorcycle to motorbike if needed
-                if cls_name == "motorcycle" and "motorbike" in self.category_name_to_id:
-                    target_name = "motorbike"
-                else:
-                    target_name = cls_name
+                # Map to 'car' (1) or 'motorbike' (2)
+                mapped_name, cat_id = self.map_to_target_class(raw_name)
 
-                boxes.append(xyxy)
-                classes.append(target_name)
-                scores.append(conf)
+                # Filter by active target classes
+                if mapped_name in self.target_classes:
+                    boxes.append(xyxy)
+                    classes.append(mapped_name)
+                    cat_ids.append(cat_id)
+                    scores.append(conf)
 
         annotations = []
         refined_polygons = []
@@ -210,19 +189,14 @@ class CarSegmenter:
                         if len(poly) < 3:
                             continue
 
-                        # Polygon simplification
                         simplified = self.simplify_polygon(poly)
                         area = float(cv2.contourArea(simplified.astype(np.float32)))
                         if area < self.min_area:
                             continue
 
                         cls_name = classes[i]
-                        # Lookup category ID from Set1 schema (fallback to 1 if unknown)
-                        cat_id = self.category_name_to_id.get(
-                            cls_name, STANDARD_YOLO_TO_CATEGORY_ID.get(cls_name, 1)
-                        )
+                        cat_id = cat_ids[i]
 
-                        # Bounding box in COCO format: [x, y, w, h] (float)
                         x_coords = simplified[:, 0]
                         y_coords = simplified[:, 1]
                         x_min = float(round(np.min(x_coords), 1))
@@ -230,10 +204,8 @@ class CarSegmenter:
                         box_w = float(round(np.max(x_coords) - x_min, 1))
                         box_h = float(round(np.max(y_coords) - y_min, 1))
 
-                        # Flatten coordinates as floats (e.g., [291.0, 278.0, ...])
                         poly_flat = [float(round(coord, 1)) for coord in simplified.flatten().tolist()]
 
-                        # Annotation object matching Set1 instances_default.json EXACTLY
                         ann = {
                             "image_id": image_id,
                             "category_id": cat_id,
@@ -253,7 +225,6 @@ class CarSegmenter:
         # 3. Create visual overlay
         vis_image = self.draw_visualizations(image, refined_polygons, boxes, classes, scores)
 
-        # Image info matching Set1 instances_default.json
         image_info = {
             "id": image_id,
             "width": width,
@@ -285,20 +256,20 @@ class CarSegmenter:
         overlay = image.copy()
 
         for poly, cls_name, conf in refined_polygons:
-            color = CLASS_COLORS.get(cls_name, (0, 255, 0))
+            color = CLASS_COLORS.get(cls_name, (0, 215, 255))
             pts = poly.astype(np.int32).reshape((-1, 1, 2))
             cv2.fillPoly(overlay, [pts], color)
 
         cv2.addWeighted(overlay, 0.45, vis, 0.55, 0, vis)
 
         for poly, cls_name, conf in refined_polygons:
-            color = CLASS_COLORS.get(cls_name, (0, 255, 0))
+            color = CLASS_COLORS.get(cls_name, (0, 215, 255))
             pts = poly.astype(np.int32).reshape((-1, 1, 2))
             cv2.polylines(vis, [pts], isClosed=True, color=color, thickness=2, lineType=cv2.LINE_AA)
 
             x_min = int(np.min(poly[:, 0]))
             y_min = int(np.min(poly[:, 1]))
-            label_text = f"{cls_name} {conf:.2f}"
+            label_text = f"{cls_name.capitalize()} {conf:.2f}"
             font = cv2.FONT_HERSHEY_SIMPLEX
             font_scale = 0.55
             thickness = 1
@@ -328,7 +299,7 @@ class CarSegmenter:
         annotations_list: List[Dict]
     ) -> Dict:
         """
-        Assemble full COCO 1.0 JSON structure matching Set1 instances_default.json 100%
+        Assemble COCO 1.0 JSON structure with 2 categories: car & motorbike
         """
         coco_annotations = []
         for ann_id, ann in enumerate(annotations_list, start=1):

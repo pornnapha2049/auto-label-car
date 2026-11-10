@@ -17,7 +17,7 @@ segmenter = CarSegmenter(
     yolo_model_name="yolov8n.pt",
     sam_model_name="mobile_sam.pt",
     conf_threshold=0.35,
-    target_classes=["car", "truck", "bus", "motorcycle"]
+    target_classes=["car", "motorbike"]
 )
 
 job_state = {
@@ -140,16 +140,10 @@ HTML_TEMPLATE = """
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small">Vehicle Classes (Set1 Schema)</label>
-                            <div class="row row-cols-2 g-2">
-                                <div class="col"><div class="form-check"><input class="form-check-input" type="checkbox" id="clsCar" checked><label class="form-check-label">1. Car</label></div></div>
-                                <div class="col"><div class="form-check"><input class="form-check-input" type="checkbox" id="clsCommPickup" checked><label class="form-check-label">2. Commercial Pickup</label></div></div>
-                                <div class="col"><div class="form-check"><input class="form-check-input" type="checkbox" id="clsHomePickup" checked><label class="form-check-label">3. Home Pickup</label></div></div>
-                                <div class="col"><div class="form-check"><input class="form-check-input" type="checkbox" id="clsSuv" checked><label class="form-check-label">4. SUV</label></div></div>
-                                <div class="col"><div class="form-check"><input class="form-check-input" type="checkbox" id="clsTruck" checked><label class="form-check-label">5. Truck</label></div></div>
-                                <div class="col"><div class="form-check"><input class="form-check-input" type="checkbox" id="clsVan" checked><label class="form-check-label">6. Van</label></div></div>
-                                <div class="col"><div class="form-check"><input class="form-check-input" type="checkbox" id="clsBus" checked><label class="form-check-label">7. Bus</label></div></div>
-                                <div class="col"><div class="form-check"><input class="form-check-input" type="checkbox" id="clsMoto" checked><label class="form-check-label">8. Motorbike</label></div></div>
+                            <label class="form-label small">Target Classes (2 Major Classes)</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check"><input class="form-check-input" type="checkbox" id="clsCar" checked><label class="form-check-label">1. Car (รวมรถยนต์, บรรทุก, บัส, กระบะ, ตู้)</label></div>
+                                <div class="form-check"><input class="form-check-input" type="checkbox" id="clsMoto" checked><label class="form-check-label">2. Motorbike (มอเตอร์ไซค์)</label></div>
                             </div>
                         </div>
                         <div class="mb-3">
@@ -291,13 +285,7 @@ HTML_TEMPLATE = """
 
             let classes = [];
             if (document.getElementById('clsCar').checked) classes.push("car");
-            if (document.getElementById('clsCommPickup').checked) classes.push("commercial_pickup");
-            if (document.getElementById('clsHomePickup').checked) classes.push("home_pickup");
-            if (document.getElementById('clsSuv').checked) classes.push("suv");
-            if (document.getElementById('clsTruck').checked) classes.push("truck");
-            if (document.getElementById('clsVan').checked) classes.push("van");
-            if (document.getElementById('clsBus').checked) classes.push("bus");
-            if (document.getElementById('clsMoto').checked) { classes.push("motorbike"); classes.push("motorcycle"); }
+            if (document.getElementById('clsMoto').checked) classes.push("motorbike");
 
             let res = await fetch('/api/start_segmentation', {
                 method: 'POST',
@@ -411,7 +399,7 @@ def api_start_segmentation():
     project_id = int(req_data.get("project_id", 0))
     task_id = int(req_data.get("task_id", 0))
     task_name = req_data.get("task_name", f"Car_Seg_{time.strftime('%Y%m%d_%H%M%S')}")
-    classes = req_data.get("classes", ["car", "truck", "bus", "motorcycle"])
+    classes = req_data.get("classes", ["car", "motorbike"])
 
     segmenter.set_models(yolo_model, sam_model)
     segmenter.set_target_classes(classes)
