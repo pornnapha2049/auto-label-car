@@ -103,7 +103,7 @@ class CVATManager:
             raise ConnectionError("Not connected to CVAT server")
 
         if labels is None:
-            labels = ["car", "truck", "bus", "motorcycle"]
+            labels = ["car", "commercial_pickup", "home_pickup", "SUV", "truck", "van", "bus", "motorbike"]
 
         label_specs = [{"name": label_name} for label_name in labels]
 
@@ -168,7 +168,7 @@ class CVATManager:
             spec["project_id"] = int(project_id)
         else:
             if labels is None:
-                labels = ["car", "truck", "bus", "motorcycle"]
+                labels = ["car", "commercial_pickup", "home_pickup", "SUV", "truck", "van", "bus", "motorbike"]
             spec["labels"] = [{"name": l} for l in labels]
 
         if progress_callback:

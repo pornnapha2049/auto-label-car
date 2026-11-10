@@ -556,21 +556,39 @@ class MainWindow(QMainWindow):
         m_layout.addWidget(self.combo_sam)
 
         # Vehicle Classes Filter
-        m_layout.addWidget(QLabel("Vehicle Classes to Segment:"))
-        cls_box = QHBoxLayout()
-        self.chk_car = QCheckBox("Car (รถเก๋ง/เก๋ง)")
+        m_layout.addWidget(QLabel("Vehicle Classes to Segment (Matching Set1 Schema):"))
+        cls_grid = QVBoxLayout()
+        cls_row1 = QHBoxLayout()
+        self.chk_car = QCheckBox("Car (1)")
         self.chk_car.setChecked(True)
-        self.chk_truck = QCheckBox("Truck (รถบรรทุก)")
+        self.chk_comm_pickup = QCheckBox("Commercial Pickup (2)")
+        self.chk_comm_pickup.setChecked(True)
+        self.chk_home_pickup = QCheckBox("Home Pickup (3)")
+        self.chk_home_pickup.setChecked(True)
+        self.chk_suv = QCheckBox("SUV (4)")
+        self.chk_suv.setChecked(True)
+        cls_row1.addWidget(self.chk_car)
+        cls_row1.addWidget(self.chk_comm_pickup)
+        cls_row1.addWidget(self.chk_home_pickup)
+        cls_row1.addWidget(self.chk_suv)
+
+        cls_row2 = QHBoxLayout()
+        self.chk_truck = QCheckBox("Truck (5)")
         self.chk_truck.setChecked(True)
-        self.chk_bus = QCheckBox("Bus (รถบัส)")
+        self.chk_van = QCheckBox("Van (6)")
+        self.chk_van.setChecked(True)
+        self.chk_bus = QCheckBox("Bus (7)")
         self.chk_bus.setChecked(True)
-        self.chk_moto = QCheckBox("Motorcycle (มอเตอร์ไซค์)")
+        self.chk_moto = QCheckBox("Motorbike (8)")
         self.chk_moto.setChecked(True)
-        cls_box.addWidget(self.chk_car)
-        cls_box.addWidget(self.chk_truck)
-        cls_box.addWidget(self.chk_bus)
-        cls_box.addWidget(self.chk_moto)
-        m_layout.addLayout(cls_box)
+        cls_row2.addWidget(self.chk_truck)
+        cls_row2.addWidget(self.chk_van)
+        cls_row2.addWidget(self.chk_bus)
+        cls_row2.addWidget(self.chk_moto)
+
+        cls_grid.addLayout(cls_row1)
+        cls_grid.addLayout(cls_row2)
+        m_layout.addLayout(cls_grid)
 
         # Confidence Threshold Slider
         conf_row = QHBoxLayout()
@@ -820,7 +838,7 @@ class MainWindow(QMainWindow):
         name_input.setPlaceholderText("e.g. Bangkok_Traffic_Cars")
         d_layout.addRow("Project Name:", name_input)
 
-        lbl_desc = QLabel("Labels will be created: car, truck, bus, motorcycle")
+        lbl_desc = QLabel("Labels: car, commercial_pickup, home_pickup, SUV, truck, van, bus, motorbike")
         lbl_desc.setStyleSheet("color: #a6adc8; font-size: 11px;")
         d_layout.addRow(lbl_desc)
 
@@ -900,11 +918,20 @@ class MainWindow(QMainWindow):
         target_classes = []
         if self.chk_car.isChecked():
             target_classes.append("car")
+        if self.chk_comm_pickup.isChecked():
+            target_classes.append("commercial_pickup")
+        if self.chk_home_pickup.isChecked():
+            target_classes.append("home_pickup")
+        if self.chk_suv.isChecked():
+            target_classes.append("suv")
         if self.chk_truck.isChecked():
             target_classes.append("truck")
+        if self.chk_van.isChecked():
+            target_classes.append("van")
         if self.chk_bus.isChecked():
             target_classes.append("bus")
         if self.chk_moto.isChecked():
+            target_classes.append("motorbike")
             target_classes.append("motorcycle")
 
         if not target_classes:
