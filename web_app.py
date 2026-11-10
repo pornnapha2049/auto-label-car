@@ -474,6 +474,11 @@ def api_start_segmentation():
             job_state["logs"].append("Uploading to CVAT server...")
 
             if task_id > 0:
+                task_size = cvat_mgr.get_task_size(task_id)
+                if task_size == 0:
+                    job_state["logs"].append(f"Task #{task_id} has 0 frames. Uploading images first...")
+                    cvat_mgr.upload_images_to_task(task_id, local_imgs)
+
                 ok, msg = cvat_mgr.upload_annotations_to_task(task_id, zip_path)
                 job_state["logs"].append(msg)
             else:

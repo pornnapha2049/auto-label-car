@@ -223,6 +223,27 @@ class CVATManager:
         except Exception as e:
             return False, f"Failed to upload annotations to Task #{task_id}: {str(e)}"
 
+    def get_task_size(self, task_id: int) -> int:
+        """Get the number of frames currently in a task"""
+        if not self.is_connected or not self.client:
+            raise ConnectionError("Not connected to CVAT server")
+        task = self.client.tasks.retrieve(task_id)
+        return getattr(task, "size", 0)
+
+    def upload_images_to_task(
+        self,
+        task_id: int,
+        image_paths: List[str],
+        progress_callback: Optional[Callable[[str, int], None]] = None
+    ) -> None:
+        """Upload image files to an existing empty or active task"""
+        if not self.is_connected or not self.client:
+            raise ConnectionError("Not connected to CVAT server")
+        if progress_callback:
+            progress_callback(f"Uploading {len(image_paths)} image(s) to Task #{task_id}...", 30)
+        task = self.client.tasks.retrieve(task_id)
+        task.upload_data(resources=image_paths)
+
     def get_task_frames_info(self, task_id: int) -> List[Dict]:
         """Get metadata for frames belonging to a task"""
         if not self.is_connected or not self.client:

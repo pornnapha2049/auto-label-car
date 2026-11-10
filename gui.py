@@ -253,6 +253,33 @@ class WorkerThread(QThread):
                     self.log_signal.emit("Uploading images & annotations to CVAT...", "info")
 
                     if self.task_id and self.task_id > 0:
+                        # Check if task is empty or has existing frames
+                        task_size = self.cvat_mgr.get_task_size(self.task_id)
+                        if task_size == 0:
+                            # Empty task: upload images first!
+                            self.log_signal.emit(f"Task #{self.task_id} has 0 frames. Uploading {len(local_processed_images)} local image(s)...", "info")
+                            self.cvat_mgr.upload_images_to_task(self.task_id, local_processed_images)
+                            self.log_signal.emit(f"Uploaded images to Task #{self.task_id}. Now importing annotations...", "info")
+                        else:
+                            # Task already has frames. Check if local filenames match task frames.
+                            task_frames = self.cvat_mgr.get_task_frames_info(self.task_id)
+                            task_frame_names = {f["name"] for f in task_frames}
+                            local_names = {os.path.basename(p) for p in local_processed_images}
+                            unmatched = local_names - task_frame_names
+                            if unmatched:
+                                sample_unmatched = list(unmatched)[:3]
+                                sample_existing = [f["name"] for f in task_frames[:3]]
+                                err_msg = (
+                                    f"Filename Mismatch: ภาพในเครื่อง {sample_unmatched} ไม่ตรงกับชื่อภาพใน Task #{self.task_id} (เช่น {sample_existing})\n\n"
+                                    f"💡 วิธีแก้ไข:\n"
+                                    f"1. หากต้องการให้โมเดลทำ Segmentation กับรูปที่อยู่ใน Task #{self.task_id} บนเซิร์ฟเวอร์ ให้เลือกโหมด:\n"
+                                    f"   🔘 'Annotate Existing CVAT Task Frames (Server Mode)'\n\n"
+                                    f"2. หากต้องการนำรูปในเครื่องนี้ไปสร้าง Task ใหม่บน CVAT ให้เลือก Task เป็น:\n"
+                                    f"   📋 '-- Create New Task --'"
+                                )
+                                self.finished_signal.emit(False, err_msg)
+                                return
+
                         # Upload annotations to existing task
                         ok, msg = self.cvat_mgr.upload_annotations_to_task(self.task_id, zip_path)
                         if ok:
@@ -502,6 +529,7 @@ class MainWindow(QMainWindow):
         task_row = QHBoxLayout()
         self.combo_tasks = QComboBox()
         self.combo_tasks.addItem("-- Create New Task --", 0)
+        self.combo_tasks.currentIndexChanged.connect(self.on_task_changed)
         self.btn_new_task = QPushButton("+ New Task")
         self.btn_new_task.setObjectName("secondaryBtn")
         self.btn_new_task.clicked.connect(self.on_create_task_dialog)
@@ -823,6 +851,15 @@ class MainWindow(QMainWindow):
             self.log(f"Loaded {len(tasks)} task(s)", "info")
         except Exception as e:
             self.log(f"Error loading tasks: {e}", "error")
+
+    def on_task_changed(self, idx):
+        task_id = self.combo_tasks.currentData()
+        if task_id and task_id > 0:
+            self.radio_cvat_task.setChecked(True)
+            self.log(f"💡 เลือก Task #{task_id}: ระบบเปลี่ยนเป็นโหมด 'Server Mode' (ประมวลผลรูปที่อยู่ใน Task นี้บน CVAT) อัตโนมัติ", "info")
+        else:
+            self.radio_local_upload.setChecked(True)
+            self.log("💡 เลือก '-- Create New Task --': ระบบเปลี่ยนเป็นโหมด 'Local Images Mode' (อัปโหลดรูปจากเครื่องขึ้น CVAT)", "info")
 
     def on_create_project_dialog(self):
         if not self.cvat_mgr.is_connected:
