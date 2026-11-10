@@ -21,9 +21,9 @@
    - รองรับ 2 โหมดการทำงานกับ CVAT:
      - **Local Images Mode:** ส่งรูปจากเครื่องไปสร้าง Task ใหม่พร้อมอัปโหลด Mask
      - **CVAT Task Mode:** ดึงรูปภาพจาก Task ที่อยู่บนเซิร์ฟเวอร์ CVAT มารัน YOLO+SAM แล้วส่ง Annotation กลับขึ้นไป
-4. **เลือกขนาด Model ได้ตามต้องการ**:
-   - **YOLO:** YOLOv8n / YOLOv8s / YOLOv8m / YOLOv8l / YOLO11n / YOLO11s
-   - **SAM:** MobileSAM (~39MB ประมวลผลเร็วมากเหมาะกับ CPU), SAM 2 Tiny, SAM 2 Base, SAM ViT-Base
+4. **เลือกขนาด Model ได้ตามต้องการ (มีตั้งแต่ Nano จนถึง Large และ XLarge)**:
+   - **YOLO:** YOLOv8 (n, s, m, l, x), YOLO11 (n, s, m, l, x) รวมทั้งรุ่น Detection และ Segmentation (-seg) และสามารถ Browse เลือกไฟล์โมเดล `.pt` ที่เทรนเองได้
+   - **SAM:** MobileSAM, SAM 2.1 (Tiny, Small, Base, Large), SAM ViT-Base (`sam_b.pt`), SAM ViT-Large (`sam_l.pt`) เพื่อความคมชัดสูงสุด
 5. **หน้าจอ GUI ให้เลือกใช้งาน 2 รูปแบบ**:
    - **Desktop GUI (PyQt5):** สวยงาม ลื่นไหล มีปุ่มพรีวิวภาพ และแสดงผลแบบ Real-time
    - **Web Browser GUI (Flask):** เปิดใช้งานผ่านเบราว์เซอร์ได้ที่ `http://127.0.0.1:5000`

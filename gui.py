@@ -531,29 +531,53 @@ class MainWindow(QMainWindow):
         m_layout = QVBoxLayout(model_group)
 
         # YOLO Model Selection
-        m_layout.addWidget(QLabel("YOLO Model (Detection & Rough Localization):"))
+        m_layout.addWidget(QLabel("YOLO Model (Size: Nano, Small, Medium, Large, XLarge):"))
+        yolo_row = QHBoxLayout()
         self.combo_yolo = QComboBox()
+        self.combo_yolo.setEditable(True)
         self.combo_yolo.addItems([
-            "yolov8n.pt (Nano - Light & Fast)",
-            "yolov8s.pt (Small - Balanced)",
-            "yolov8m.pt (Medium - High Accuracy)",
-            "yolov8l.pt (Large - Maximum Recall)",
-            "yolo11n.pt (YOLO11 Nano - Next-Gen Fast)",
-            "yolo11s.pt (YOLO11 Small - Accurate)"
+            "yolo11x.pt (YOLO11 XLarge - Maximum Accuracy)",
+            "yolo11l.pt (YOLO11 Large - High Accuracy)",
+            "yolo11m.pt (YOLO11 Medium - Balanced)",
+            "yolo11s.pt (YOLO11 Small - Fast & Accurate)",
+            "yolo11n.pt (YOLO11 Nano - Ultra Fast)",
+            "yolov8x.pt (YOLOv8 XLarge - Maximum Accuracy)",
+            "yolov8l.pt (YOLOv8 Large - High Accuracy)",
+            "yolov8m.pt (YOLOv8 Medium - Balanced)",
+            "yolov8s.pt (YOLOv8 Small - Fast)",
+            "yolov8n.pt (YOLOv8 Nano - Light & Fast)",
+            "yolo11x-seg.pt (YOLO11 XLarge Seg)",
+            "yolo11l-seg.pt (YOLO11 Large Seg)",
+            "yolov8x-seg.pt (YOLOv8 XLarge Seg)",
+            "yolov8l-seg.pt (YOLOv8 Large Seg)"
         ])
-        m_layout.addWidget(self.combo_yolo)
+        self.btn_browse_yolo = QPushButton("Browse...")
+        self.btn_browse_yolo.setObjectName("secondaryBtn")
+        self.btn_browse_yolo.clicked.connect(self.on_browse_yolo_model)
+        yolo_row.addWidget(self.combo_yolo, 1)
+        yolo_row.addWidget(self.btn_browse_yolo)
+        m_layout.addLayout(yolo_row)
 
         # SAM Model Selection
-        m_layout.addWidget(QLabel("SAM Model (Boundary Refinement):"))
+        m_layout.addWidget(QLabel("SAM Model (Size: Mobile, Tiny, Small, Base, Large):"))
+        sam_row = QHBoxLayout()
         self.combo_sam = QComboBox()
+        self.combo_sam.setEditable(True)
         self.combo_sam.addItems([
-            "mobile_sam.pt (MobileSAM - ~39MB, Fast / CPU Ideal)",
-            "sam2.1_t.pt (SAM 2 Tiny - Fast & Crisp)",
-            "sam2_b.pt (SAM 2 Base - Very Crisp)",
-            "sam_b.pt (SAM ViT-Base - Standard ~375MB)",
-            "sam_l.pt (SAM ViT-Large - Maximum Precision)"
+            "sam_l.pt (SAM ViT-Large - Maximum Precision, ~2.5GB)",
+            "sam_b.pt (SAM ViT-Base - Standard Precision, ~375MB)",
+            "sam2.1_l.pt (SAM 2.1 Large - State-of-the-Art Crisp)",
+            "sam2.1_b.pt (SAM 2.1 Base - Very Crisp)",
+            "sam2.1_s.pt (SAM 2.1 Small - Balanced)",
+            "sam2.1_t.pt (SAM 2.1 Tiny - Fast & Crisp)",
+            "mobile_sam.pt (MobileSAM - ~39MB, Fast / CPU Ideal)"
         ])
-        m_layout.addWidget(self.combo_sam)
+        self.btn_browse_sam = QPushButton("Browse...")
+        self.btn_browse_sam.setObjectName("secondaryBtn")
+        self.btn_browse_sam.clicked.connect(self.on_browse_sam_model)
+        sam_row.addWidget(self.combo_sam, 1)
+        sam_row.addWidget(self.btn_browse_sam)
+        m_layout.addLayout(sam_row)
 
         # Vehicle Classes Filter (2 Major Classes)
         m_layout.addWidget(QLabel("Target Classes (2 Major Classes):"))
@@ -859,6 +883,20 @@ class MainWindow(QMainWindow):
 
         self.log(f"Ready to create task '{t_name}' upon starting segmentation.", "info")
 
+    def on_browse_yolo_model(self):
+        f, _ = QFileDialog.getOpenFileName(self, "Select YOLO Model (.pt)", "", "PyTorch Weights (*.pt *.onnx)")
+        if f:
+            self.combo_yolo.insertItem(0, f)
+            self.combo_yolo.setCurrentIndex(0)
+            self.log(f"Selected custom YOLO model: {f}", "info")
+
+    def on_browse_sam_model(self):
+        f, _ = QFileDialog.getOpenFileName(self, "Select SAM Model (.pt)", "", "PyTorch Weights (*.pt *.pth)")
+        if f:
+            self.combo_sam.insertItem(0, f)
+            self.combo_sam.setCurrentIndex(0)
+            self.log(f"Selected custom SAM model: {f}", "info")
+
     def on_browse_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "Select Folder with Images")
         if folder:
@@ -886,8 +924,11 @@ class MainWindow(QMainWindow):
 
     def on_start_processing(self):
         # 1. Gather configuration
-        yolo_choice = self.combo_yolo.currentText().split()[0]
-        sam_choice = self.combo_sam.currentText().split()[0]
+        yolo_raw = self.combo_yolo.currentText().strip()
+        yolo_choice = yolo_raw.split()[0] if " (" in yolo_raw else yolo_raw
+
+        sam_raw = self.combo_sam.currentText().strip()
+        sam_choice = sam_raw.split()[0] if " (" in sam_raw else sam_raw
         conf_thresh = self.slider_conf.value() / 100.0
         poly_tolerance = self.slider_poly.value() / 10.0
 

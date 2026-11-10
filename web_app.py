@@ -122,21 +122,30 @@ HTML_TEMPLATE = """
                     <div class="card-header">3. Model Configuration</div>
                     <div class="card-body">
                         <div class="mb-2">
-                            <label class="form-label small">YOLO Model (Detection & Rough Localization)</label>
+                            <label class="form-label small">YOLO Model (Size: Nano, Small, Medium, Large, XLarge)</label>
                             <select id="yoloModel" class="form-select">
-                                <option value="yolov8n.pt">yolov8n.pt (Nano - Light & Fast)</option>
-                                <option value="yolov8s.pt">yolov8s.pt (Small - Balanced)</option>
-                                <option value="yolov8m.pt">yolov8m.pt (Medium - High Accuracy)</option>
-                                <option value="yolo11n.pt">yolo11n.pt (YOLO11 Nano - Next Gen)</option>
+                                <option value="yolo11x.pt">yolo11x.pt (YOLO11 XLarge - Maximum Accuracy)</option>
+                                <option value="yolo11l.pt">yolo11l.pt (YOLO11 Large - High Accuracy)</option>
+                                <option value="yolo11m.pt">yolo11m.pt (YOLO11 Medium - Balanced)</option>
                                 <option value="yolo11s.pt">yolo11s.pt (YOLO11 Small)</option>
+                                <option value="yolo11n.pt">yolo11n.pt (YOLO11 Nano - Next Gen)</option>
+                                <option value="yolov8x.pt">yolov8x.pt (YOLOv8 XLarge - Maximum Accuracy)</option>
+                                <option value="yolov8l.pt">yolov8l.pt (YOLOv8 Large - High Accuracy)</option>
+                                <option value="yolov8m.pt">yolov8m.pt (YOLOv8 Medium - High Accuracy)</option>
+                                <option value="yolov8s.pt">yolov8s.pt (YOLOv8 Small - Balanced)</option>
+                                <option value="yolov8n.pt">yolov8n.pt (YOLOv8 Nano - Light & Fast)</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small">SAM Model (Crisp Edge Refinement)</label>
+                            <label class="form-label small">SAM Model (Size: Mobile, Tiny, Small, Base, Large)</label>
                             <select id="samModel" class="form-select">
+                                <option value="sam_l.pt">sam_l.pt (SAM ViT-Large - Maximum Precision, ~2.5GB)</option>
+                                <option value="sam_b.pt">sam_b.pt (SAM ViT-Base - Standard High Precision, ~375MB)</option>
+                                <option value="sam2.1_l.pt">sam2.1_l.pt (SAM 2.1 Large - State-of-the-Art Crisp)</option>
+                                <option value="sam2.1_b.pt">sam2.1_b.pt (SAM 2.1 Base - Very Crisp)</option>
+                                <option value="sam2.1_s.pt">sam2.1_s.pt (SAM 2.1 Small - Balanced)</option>
+                                <option value="sam2.1_t.pt">sam2.1_t.pt (SAM 2.1 Tiny - Fast & Crisp)</option>
                                 <option value="mobile_sam.pt">mobile_sam.pt (~39MB - Fast / CPU Friendly)</option>
-                                <option value="sam2.1_t.pt">sam2.1_t.pt (SAM2 Tiny - Fast & Crisp)</option>
-                                <option value="sam_b.pt">sam_b.pt (SAM ViT-Base - Standard High Precision)</option>
                             </select>
                         </div>
                         <div class="mb-3">
