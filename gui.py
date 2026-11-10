@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize
 from PyQt5.QtGui import QPixmap, QImage, QFont, QColor, QIcon
 
-from core.pipeline import CarSegmenter, DEFAULT_VEHICLE_CLASSES, CLASS_COLORS
+from core.pipeline import CarSegmenter, DEFAULT_CATEGORIES, DEFAULT_VEHICLE_CLASSES, CLASS_COLORS
 from core.cvat_manager import CVATManager
 
 # Modern Dark Theme Stylesheet

@@ -6,7 +6,7 @@ import threading
 import cv2
 from pathlib import Path
 from flask import Flask, render_template_string, request, jsonify, send_file
-from core.pipeline import CarSegmenter, DEFAULT_VEHICLE_CLASSES
+from core.pipeline import CarSegmenter, DEFAULT_CATEGORIES, DEFAULT_VEHICLE_CLASSES
 from core.cvat_manager import CVATManager
 
 app = Flask(__name__)

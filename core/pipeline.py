@@ -13,6 +13,7 @@ DEFAULT_CATEGORIES = [
     {"id": 1, "name": "car", "supercategory": ""},
     {"id": 2, "name": "motorbike", "supercategory": ""}
 ]
+DEFAULT_VEHICLE_CLASSES = DEFAULT_CATEGORIES
 
 # Distinct colors for visualization (BGR)
 CLASS_COLORS = {
