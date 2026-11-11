@@ -114,6 +114,11 @@ HTML_TEMPLATE = """
                             <label class="form-label small">New Task Name (if creating)</label>
                             <input type="text" id="newTaskName" class="form-control" placeholder="Car_Segmentation_Batch_01">
                         </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Upload New Images (for New Task)</label>
+                            <input type="file" id="fileUpload" class="form-control" multiple accept="image/*" onchange="uploadSelectedImages()">
+                            <small id="uploadStatusText" class="text-info"></small>
+                        </div>
                     </div>
                 </div>
 
@@ -283,6 +288,36 @@ HTML_TEMPLATE = """
             }
         }
 
+        async function uploadSelectedImages() {
+            let fileInput = document.getElementById('fileUpload');
+            let files = fileInput.files;
+            if (!files || files.length === 0) return;
+
+            let statusEl = document.getElementById('uploadStatusText');
+            statusEl.innerText = `⏳ Uploading ${files.length} images...`;
+
+            let formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('images', files[i]);
+            }
+
+            try {
+                let res = await fetch('/api/upload_images', {
+                    method: 'POST',
+                    body: formData
+                });
+                let data = await res.json();
+                if (data.ok) {
+                    document.getElementById('imageFolder').value = data.folder;
+                    statusEl.innerText = `✅ Uploaded ${data.count} images ready.`;
+                } else {
+                    statusEl.innerText = `❌ Error: ${data.msg}`;
+                }
+            } catch(e) {
+                statusEl.innerText = `❌ Upload failed: ${e}`;
+            }
+        }
+
         async function startSegmentation() {
             let yolo = document.getElementById('yoloModel').value;
             let sam = document.getElementById('samModel').value;
@@ -394,6 +429,24 @@ def api_create_project():
         return jsonify({"ok": True, "msg": f"Created Project #{proj['id']}: {proj['name']}"})
     except Exception as e:
         return jsonify({"ok": False, "msg": str(e)})
+
+@app.route("/api/upload_images", methods=["POST"])
+def api_upload_images():
+    files = request.files.getlist("images")
+    if not files:
+        return jsonify({"ok": False, "msg": "No images provided"})
+
+    upload_dir = os.path.abspath("./uploads")
+    session_dir = os.path.join(upload_dir, f"batch_{int(time.time())}")
+    os.makedirs(session_dir, exist_ok=True)
+
+    saved_count = 0
+    for f in files:
+        if f.filename:
+            f.save(os.path.join(session_dir, f.filename))
+            saved_count += 1
+
+    return jsonify({"ok": True, "count": saved_count, "folder": session_dir})
 
 @app.route("/api/start_segmentation", methods=["POST"])
 def api_start_segmentation():

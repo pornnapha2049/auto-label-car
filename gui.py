@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import (
     QMessageBox, QSplitter, QDialog, QFormLayout, QRadioButton,
     QButtonGroup, QFrame, QScrollArea, QSizePolicy
 )
+from typing import Optional
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize
 from PyQt5.QtGui import QPixmap, QImage, QFont, QColor, QIcon
 
@@ -424,6 +425,101 @@ class WorkerThread(QThread):
         self.is_running = False
 
 
+class CreateNewTaskDialog(QDialog):
+    def __init__(self, parent=None, default_name="", projects=None, current_proj_idx=0, initial_images=None):
+        super().__init__(parent)
+        self.setWindowTitle("➕ Create New CVAT Task & Select Images")
+        self.resize(520, 340)
+        self.selected_images = list(initial_images) if initial_images else []
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(12)
+
+        info_lbl = QLabel("ตั้งค่า Task ใหม่และเลือกไฟล์รูปภาพเพื่อเตรียมอัปโหลดขึ้น CVAT:")
+        info_lbl.setStyleSheet("color: #89b4fa; font-weight: bold; font-size: 13px;")
+        layout.addWidget(info_lbl)
+
+        form = QFormLayout()
+
+        self.txt_task_name = QLineEdit(default_name)
+        self.txt_task_name.setPlaceholderText("e.g. Car_Dataset_Batch_01")
+        form.addRow("Task Name:", self.txt_task_name)
+
+        self.combo_proj = QComboBox()
+        if projects:
+            for p_name, p_id in projects:
+                self.combo_proj.addItem(p_name, p_id)
+            if 0 <= current_proj_idx < self.combo_proj.count():
+                self.combo_proj.setCurrentIndex(current_proj_idx)
+        form.addRow("CVAT Project:", self.combo_proj)
+
+        layout.addLayout(form)
+
+        img_group = QGroupBox("Select Images to Upload")
+        img_layout = QVBoxLayout(img_group)
+
+        btn_row = QHBoxLayout()
+        self.btn_folder = QPushButton("📁 Choose Folder...")
+        self.btn_folder.setObjectName("secondaryBtn")
+        self.btn_folder.clicked.connect(self.choose_folder)
+
+        self.btn_files = QPushButton("🖼️ Choose Files...")
+        self.btn_files.setObjectName("secondaryBtn")
+        self.btn_files.clicked.connect(self.choose_files)
+
+        btn_row.addWidget(self.btn_folder)
+        btn_row.addWidget(self.btn_files)
+        img_layout.addLayout(btn_row)
+
+        self.lbl_status = QLabel(
+            f"Selected: {len(self.selected_images)} image(s)" if self.selected_images else "No images selected yet"
+        )
+        self.lbl_status.setStyleSheet("color: #a6e3a1; font-weight: bold; padding: 4px;")
+        img_layout.addWidget(self.lbl_status)
+
+        layout.addWidget(img_group)
+
+        btn_box = QHBoxLayout()
+        btn_box.addStretch()
+        self.btn_cancel = QPushButton("Cancel")
+        self.btn_cancel.setObjectName("secondaryBtn")
+        self.btn_cancel.clicked.connect(self.reject)
+
+        self.btn_ok = QPushButton("✔ Confirm & Proceed")
+        self.btn_ok.setObjectName("actionBtn")
+        self.btn_ok.clicked.connect(self.accept)
+
+        btn_box.addWidget(self.btn_cancel)
+        btn_box.addWidget(self.btn_ok)
+        layout.addLayout(btn_box)
+
+    def choose_folder(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Folder with Images")
+        if folder:
+            valid_exts = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+            self.selected_images = [
+                os.path.join(folder, f) for f in os.listdir(folder)
+                if Path(f).suffix.lower() in valid_exts
+            ]
+            self.lbl_status.setText(f"Selected: {len(self.selected_images)} images from {folder}")
+
+    def choose_files(self):
+        files, _ = QFileDialog.getOpenFileNames(
+            self, "Select Images", "", "Image Files (*.jpg *.jpeg *.png *.bmp *.webp)"
+        )
+        if files:
+            self.selected_images = files
+            self.lbl_status.setText(f"Selected: {len(self.selected_images)} file(s)")
+
+    def get_data(self):
+        return {
+            "task_name": self.txt_task_name.text().strip(),
+            "project_index": self.combo_proj.currentIndex(),
+            "project_id": self.combo_proj.currentData(),
+            "images": self.selected_images
+        }
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -466,7 +562,7 @@ class MainWindow(QMainWindow):
         left_layout.setSpacing(10)
 
         # Tabs for Configuration
-        tabs = QTabWidget()
+        self.tabs = tabs = QTabWidget()
 
         # ---------------- TAB 1: CVAT Server & Projects ----------------
         tab_cvat = QWidget()
@@ -546,6 +642,23 @@ class MainWindow(QMainWindow):
         self.new_task_name_input = QLineEdit()
         self.new_task_name_input.setPlaceholderText("e.g. Car_Dataset_Batch_01")
         proj_layout.addWidget(self.new_task_name_input)
+
+        # Quick Image Selection for New Task
+        proj_layout.addWidget(QLabel("Upload Images for New Task:"))
+        quick_img_row = QHBoxLayout()
+        self.btn_quick_folder = QPushButton("📁 Choose Folder")
+        self.btn_quick_folder.setObjectName("secondaryBtn")
+        self.btn_quick_folder.clicked.connect(self.on_browse_folder)
+        self.btn_quick_files = QPushButton("🖼️ Choose Files")
+        self.btn_quick_files.setObjectName("secondaryBtn")
+        self.btn_quick_files.clicked.connect(self.on_browse_files)
+        quick_img_row.addWidget(self.btn_quick_folder)
+        quick_img_row.addWidget(self.btn_quick_files)
+        proj_layout.addLayout(quick_img_row)
+
+        self.lbl_task_images_quick = QLabel("Selected: 0 images")
+        self.lbl_task_images_quick.setStyleSheet("color: #a6e3a1; font-weight: bold; font-size: 11px;")
+        proj_layout.addWidget(self.lbl_task_images_quick)
 
         tab_cvat_layout.addWidget(proj_group)
         tab_cvat_layout.addStretch()
@@ -908,6 +1021,12 @@ class MainWindow(QMainWindow):
                 self.log(f"Failed to create project: {e}", "error")
                 QMessageBox.critical(self, "Error", str(e))
 
+    def update_selected_images_label(self, desc: str):
+        if hasattr(self, 'lbl_selected_images'):
+            self.lbl_selected_images.setText(desc)
+        if hasattr(self, 'lbl_task_images_quick'):
+            self.lbl_task_images_quick.setText(desc)
+
     def on_create_task_dialog(self):
         if not self.cvat_mgr.is_connected:
             QMessageBox.warning(self, "Not Connected", "Please connect and log in to CVAT first.")
@@ -916,9 +1035,36 @@ class MainWindow(QMainWindow):
         t_name = self.new_task_name_input.text().strip()
         if not t_name:
             t_name = f"Car_Seg_{time.strftime('%Y%m%d_%H%M%S')}"
-            self.new_task_name_input.setText(t_name)
 
-        self.log(f"Ready to create task '{t_name}' upon starting segmentation.", "info")
+        projects = []
+        for i in range(self.combo_projects.count()):
+            projects.append((self.combo_projects.itemText(i), self.combo_projects.itemData(i)))
+
+        dlg = CreateNewTaskDialog(
+            parent=self,
+            default_name=t_name,
+            projects=projects,
+            current_proj_idx=self.combo_projects.currentIndex(),
+            initial_images=self.input_image_paths
+        )
+        if dlg.exec_() == QDialog.Accepted:
+            data = dlg.get_data()
+            task_name = data["task_name"] or f"Car_Seg_{time.strftime('%Y%m%d_%H%M%S')}"
+            self.new_task_name_input.setText(task_name)
+
+            if data["project_index"] >= 0:
+                self.combo_projects.setCurrentIndex(data["project_index"])
+
+            if data["images"]:
+                self.input_image_paths = data["images"]
+                self.update_selected_images_label(f"Selected: {len(self.input_image_paths)} images")
+                self.log(f"New Task '{task_name}' configured with {len(self.input_image_paths)} images.", "info")
+            else:
+                self.log(f"New Task '{task_name}' configured. (No images selected yet)", "warning")
+
+            self.combo_tasks.setCurrentIndex(0)
+            self.radio_local_upload.setChecked(True)
+            self.log("💡 Ready to start! Click '🚀 Start Car Segmentation & Upload' to begin.", "info")
 
     def on_browse_yolo_model(self):
         f, _ = QFileDialog.getOpenFileName(self, "Select YOLO Model (.pt)", "", "PyTorch Weights (*.pt *.onnx)")
@@ -942,8 +1088,9 @@ class MainWindow(QMainWindow):
                 os.path.join(folder, f) for f in os.listdir(folder)
                 if Path(f).suffix.lower() in valid_exts
             ]
-            self.lbl_selected_images.setText(f"Selected: {len(self.input_image_paths)} images from {folder}")
-            self.log(f"Selected {len(self.input_image_paths)} images from {folder}", "info")
+            msg = f"Selected: {len(self.input_image_paths)} images from {folder}"
+            self.update_selected_images_label(msg)
+            self.log(msg, "info")
 
     def on_browse_files(self):
         files, _ = QFileDialog.getOpenFileNames(
@@ -951,8 +1098,9 @@ class MainWindow(QMainWindow):
         )
         if files:
             self.input_image_paths = files
-            self.lbl_selected_images.setText(f"Selected: {len(self.input_image_paths)} files")
-            self.log(f"Selected {len(self.input_image_paths)} files", "info")
+            msg = f"Selected: {len(self.input_image_paths)} files"
+            self.update_selected_images_label(msg)
+            self.log(msg, "info")
 
     def on_browse_output(self):
         folder = QFileDialog.getExistingDirectory(self, "Select Output Directory")
@@ -1033,7 +1181,7 @@ class MainWindow(QMainWindow):
             sample_path = os.path.abspath("bus.jpg")
             if os.path.exists(sample_path):
                 self.input_image_paths = [sample_path]
-                self.lbl_selected_images.setText("Selected: 1 image (bus.jpg sample)")
+                self.update_selected_images_label("Selected: 1 image (bus.jpg sample)")
                 self.log("Auto-selected sample 'bus.jpg'", "info")
                 return True
             else:
