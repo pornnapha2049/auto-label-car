@@ -936,7 +936,8 @@ class MainWindow(QMainWindow):
 
             projects = self.cvat_mgr.list_projects()
             for p in projects:
-                self.combo_projects.addItem(f"📁 #{p['id']}: {p['name']}", p['id'])
+                org_label = f" [{p['organization']}]" if p.get("organization") else ""
+                self.combo_projects.addItem(f"📁 #{p['id']}: {p['name']}{org_label}", p['id'])
 
             self.log(f"Loaded {len(projects)} project(s) from CVAT", "info")
             self.refresh_tasks()

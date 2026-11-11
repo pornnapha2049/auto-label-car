@@ -246,7 +246,8 @@ HTML_TEMPLATE = """
             pSelect.innerHTML = '<option value="0">-- None (Standalone Tasks) --</option>';
             if (dataP.projects) {
                 dataP.projects.forEach(p => {
-                    pSelect.innerHTML += `<option value="${p.id}">📁 #${p.id}: ${p.name}</option>`;
+                    let orgLabel = p.organization ? ` [${p.organization}]` : '';
+                    pSelect.innerHTML += `<option value="${p.id}">📁 #${p.id}: ${p.name}${orgLabel}</option>`;
                 });
             }
 
